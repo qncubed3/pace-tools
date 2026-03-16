@@ -1,0 +1,46 @@
+[00:00:01.929] Server  LOG     ✓ Ready in 1317ms
+[00:00:02.836] Server  ERROR   ⨯ ./Desktop/Projects/Coding/pace-tools/app/page.tsx:1:1
+Module not found: Can't resolve './components/Sidebar'
+> 1 | import Sidebar from "./components/Sidebar";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import SidebarHeader from "./components/SidebarHeader";
+  3 |
+  4 | export default function Page() {
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:00:03.850] Browser ERROR   uncaughtError: Error: ./Desktop/Projects/Coding/pace-tools/app/page.tsx:1:1
+Module not found: Can't resolve './components/Sidebar'
+> 1 | import Sidebar from "./components/Sidebar";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import SidebarHeader from "./components/SidebarHeader";
+  3 |
+  4 | export default function Page() {
+
+
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+[00:00:04.088] Browser ERROR   ./Desktop/Projects/Coding/pace-tools/app/page.tsx:1:1
+Module not found: Can't resolve './components/Sidebar'
+> 1 | import Sidebar from "./components/Sidebar";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import SidebarHeader from "./components/SidebarHeader";
+  3 |
+  4 | export default function Page() {
+
+https://nextjs.org/docs/messages/module-not-found
+[00:00:04.088] Browser ERROR   ./Desktop/Projects/Coding/pace-tools/app/page.tsx:1:1
+Module not found: Can't resolve './components/Sidebar'
+> 1 | import Sidebar from "./components/Sidebar";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  2 | import SidebarHeader from "./components/SidebarHeader";
+  3 |
+  4 | export default function Page() {
+
+https://nextjs.org/docs/messages/module-not-found
+[00:00:17.941] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/qncub/Desktop/Projects/Coding/pace-tools/app/components/Sidebar.tsx"],"sourcesContent":["export default function Sidebar({ children }: { children: React.ReactNode }) {\r\n    return (\r\n        <div className=\"bg-card bg-white relative z-sidebar shrink-0 overflow-hidden w-[384px] h-full shadow\">\r\n            {children}\r\n        </div>\r\n    )\r\n}"],"names":[],"mappings":";;;;;;AAAe,SAAS,QAAQ,EAAE,QAAQ,EAAiC;IACvE,qBACI,gSAAC;QAAI,WAAU;kBACV;;;;;;AAGb"}},
+    {"offset": {"line": 34, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/qncub/Desktop/Projects/Coding/pace-tools/app/page.tsx"],"sourcesContent":["import Sidebar from \"./components/Sidebar\";\r\n\r\nexport default function Page() {\r\n    return (<div className=\"flex h-screen bg-gray-50\">\r\n        <Sidebar>\r\n            <div className=\"bg-red-50\">bruh</div>    \r\n        </Sidebar>\r\n    </div>) \r\n}"],"names":[],"mappings":";;;;;AAAA;;;AAEe,SAAS;IACpB,qBAAQ,gSAAC;QAAI,WAAU;kBACnB,cAAA,gSAAC,0LAAO;sBACJ,cAAA,gSAAC;gBAAI,WAAU;0BAAY;;;;;;;;;;;;;;;;AAGvC"}}]
+}
