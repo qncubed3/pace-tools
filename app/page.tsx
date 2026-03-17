@@ -15,13 +15,13 @@ export default function Page() {
     // Selected field
     const [lockedField, setLockedField] = useState<LockedField>("time");
 
-    // Field sourth of truth
+    // Field source of truth
     const [pace, setPace] = useState(6);
     const [distance, setDistance] = useState(15);
     const [time, setTime] = useState(90);
 
     useEffect(() => {
-        document.body.style.overflow = open ? "hidden" : "unset";
+        document.body.style.overflow = open ? "hidden" : "auto";
     }, [open]);
 
     // Derived fields
@@ -71,11 +71,7 @@ export default function Page() {
                     title="pace"
                     primaryFn={(t) => 3 + t * 10}
                     invertFn={(v) => (v - 3) / 10}
-                    convertFn={(minPerMile) => minPerMile / 1.60934}
-                    primaryUnit="min/mi"
-                    secondaryUnit="min/km"
-                    displayMode="time"
-                    step={1 / 60}
+                    unitGroup="pace"
                     isLocked={lockedField === "pace"}
                     onLock={() => setLockedField("pace")}
                     lockedValue={lockedField === "pace" ? lockedPace : undefined}
@@ -85,11 +81,7 @@ export default function Page() {
                     title="distance"
                     primaryFn={(t) => t * 30}
                     invertFn={(miles) => miles / 30}
-                    convertFn={(miles) => miles * 1.60934}
-                    primaryUnit="mi"
-                    secondaryUnit="km"
-                    displayMode="decimal"
-                    step={0.1}
+                    unitGroup="distance"
                     isLocked={lockedField === "distance"}
                     onLock={() => setLockedField("distance")}
                     lockedValue={lockedField === "distance" ? lockedDistance : undefined}
@@ -99,11 +91,7 @@ export default function Page() {
                     title="time"
                     primaryFn={(t) => t * 300}
                     invertFn={(v) => v / 300}
-                    convertFn={(mins) => mins / 60}
-                    primaryUnit="min"
-                    secondaryUnit="hr"
-                    displayMode="time"
-                    step={1}
+                    unitGroup="time"
                     isLocked={lockedField === "time"}
                     onLock={() => setLockedField("time")}
                     lockedValue={lockedField === "time" ? lockedTime : undefined}
