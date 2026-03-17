@@ -8,12 +8,19 @@ import SidebarHeader from "./components/SidebarHeader";
 export default function Page() {
     const {data: session} = useSession()
     return (<div className="flex h-screen bg-gray-50">
-        <Sidebar>
-            <SidebarHeader/>
-            <div className="bg-red-200">hi</div>
-            <div>{session?.expires}</div>
-        </Sidebar>
-        <div className="flex-1 flex items-center justify-center space-x-24">
+        <div className="hidden lg:block">
+            <Sidebar>
+                <SidebarHeader/>
+                <div className="bg-red-200">hi</div>
+                <div>{session?.expires}</div>
+            </Sidebar>
+        </div>
+        <div className="
+            flex flex-col sm:flex-row
+            items-center justify-center
+            gap-6 sm:gap-10 md:gap-20 lg:gap-24
+            w-full
+        ">
             <SliderCard
                 title="pace"
                 primaryFn={(t) => 3 + t * 10}
