@@ -11,11 +11,21 @@ interface SliderCardProps {
     secondaryUnit: string;
     displayMode?: DisplayMode;
     step?: number;
+    isLocked?: boolean;
+    onLock?: () => void;
+    lockedValue?: number | undefined;
+    onValueChange?: (val: number) => void;
 }
 
 function fmtTime(minutes: number): string {
-    const m = Math.floor(minutes);
-    const s = Math.round((minutes - m) * 60);
+    const totalSeconds = Math.round(minutes * 60);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+
+    if (h > 0) {
+        return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
     return `${m}:${String(s).padStart(2, "0")}`;
 }
 
@@ -40,6 +50,10 @@ export default function SliderCard({
     secondaryUnit,
     displayMode = "decimal",
     step = 0.1,
+    isLocked = false,
+    onLock,
+    lockedValue,
+    onValueChange,
 }: SliderCardProps) {
     const [t, setT] = useState(0.5);
     const [inputVal, setInputVal] = useState("");
@@ -53,14 +67,14 @@ export default function SliderCard({
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const primaryVal = primaryFn(t);
+    const primaryVal = isLocked && lockedValue !== undefined ? lockedValue : primaryFn(t);
     const secondaryVal = convertFn(primaryVal);
 
     const setFromPrimary = useCallback((val: number) => {
         const newT = Math.min(1, Math.max(0, invertFn(val)));
         setT(newT);
-        return newT;
-    }, [invertFn]);
+        onValueChange?.(val);
+    }, [invertFn, onValueChange]);
 
     const nudge = useCallback((delta: number) => {
         const newVal = primaryFn(tRef.current) + delta;
@@ -101,72 +115,92 @@ export default function SliderCard({
     const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
         e.preventDefault();
         e.stopPropagation();
-
-        const input = e.currentTarget;
-        input.blur();
-
+        e.currentTarget.blur();
         nudge(e.deltaY < 0 ? step : -step);
     };
 
     return (
-        <div className="w-60 bg-white p-6 rounded-3xl shadow-md">
-            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
-                {title}
-            </p>
+        <div className={`w-60 bg-white p-6 rounded-3xl shadow-md transition-all ${isLocked ? "ring-2 ring-blue-400" : ""}`}>
+            <div className="flex items-center justify-between mb-5">
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                    {title}
+                </p>
+                <button
+                    onClick={onLock}
+                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${isLocked
+                            ? "bg-blue-50 border-blue-300 text-blue-500"
+                            : "border-gray-700 text-gray-700 hover:border-gray-400 hover:text-gray-400"
+                        }`}
+                >
+                    {isLocked ? "calculating" : "calculate"}
+                </button>
+            </div>
 
             <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl overflow-hidden focus-within:border-blue-400 focus-within:bg-white transition-colors">
-                    <div className="flex flex-col items-center self-stretch border-r border-gray-200">
-                        <button
-                            onMouseDown={(e) => { e.preventDefault(); startHold(step); }}
-                            onMouseUp={stopHold}
-                            onMouseLeave={stopHold}
-                            onTouchStart={(e) => { e.preventDefault(); startHold(step); }}
-                            onTouchEnd={stopHold}
-                            className="flex-1 w-6 hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 flex items-center justify-center select-none cursor-pointer text-xs transition-colors border-b border-gray-200"
-                        >
-                            +
-                        </button>
-                        <button
-                            onMouseDown={(e) => { e.preventDefault(); startHold(-step); }}
-                            onMouseUp={stopHold}
-                            onMouseLeave={stopHold}
-                            onTouchStart={(e) => { e.preventDefault(); startHold(-step); }}
-                            onTouchEnd={stopHold}
-                            className="flex-1 w-6 hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 flex items-center justify-center select-none cursor-pointer text-xs transition-colors"
-                        >
-                            −
-                        </button>
-                    </div>
-
+                <div className={`flex items-center border rounded-xl overflow-hidden transition-colors flex-1 ${isLocked
+                    ? "bg-blue-50 border-blue-200"
+                    : "bg-gray-50 border-gray-200 focus-within:border-blue-400 focus-within:bg-white"
+                    }`}>
+                    {!isLocked && (
+                        <div className="flex flex-col items-center self-stretch border-r border-gray-200">
+                            <button
+                                onMouseDown={(e) => { e.preventDefault(); startHold(step); }}
+                                onMouseUp={stopHold}
+                                onMouseLeave={stopHold}
+                                onTouchStart={(e) => { e.preventDefault(); startHold(step); }}
+                                onTouchEnd={stopHold}
+                                className="flex-1 w-6 hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 flex items-center justify-center select-none cursor-pointer text-xs transition-colors border-b border-gray-200"
+                            >
+                                +
+                            </button>
+                            <button
+                                onMouseDown={(e) => { e.preventDefault(); startHold(-step); }}
+                                onMouseUp={stopHold}
+                                onMouseLeave={stopHold}
+                                onTouchStart={(e) => { e.preventDefault(); startHold(-step); }}
+                                onTouchEnd={stopHold}
+                                className="flex-1 w-6 hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 flex items-center justify-center select-none cursor-pointer text-xs transition-colors"
+                            >
+                                −
+                            </button>
+                        </div>
+                    )}
                     <input
                         type="text"
                         inputMode={displayMode === "time" ? "text" : "decimal"}
-                        value={focused ? inputVal : fmt(primaryVal, displayMode)}
+                        value={isLocked ? fmt(primaryVal, displayMode) : (focused ? inputVal : fmt(primaryVal, displayMode))}
                         onChange={handleInputChange}
                         onFocus={handleFocus}
                         onBlur={handleBlur}
                         onWheel={handleWheel}
-                        className="text-4xl font-bold tabular-nums w-28 h-12 bg-transparent py-1 outline-none text-center"
+                        readOnly={isLocked}
+                        className={`text-4xl font-bold tabular-nums h-12 bg-transparent py-1 outline-none text-center flex-1 min-w-0 ${isLocked ? "text-blue-500 cursor-default" : ""
+                            }`}
                     />
                 </div>
-
                 <span className="text-sm text-gray-400 shrink-0">{primaryUnit}</span>
             </div>
 
-            <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.001}
-                value={t}
-                draggable={false}
-                onChange={(e) => {
-                    setT(Number(e.target.value));
-                    if (focused) setInputVal(fmt(primaryFn(Number(e.target.value)), displayMode));
-                }}
-                className="w-full mb-4"
-            />
+            <div className="mb-4" style={{ height: "20px" }}>
+                {!isLocked && (
+                    <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.001}
+                        value={t}
+                        draggable={false}
+                        onChange={(e) => {
+                            const newT = Number(e.target.value);
+                            setT(newT);
+                            const newVal = primaryFn(newT);
+                            onValueChange?.(newVal);
+                            if (focused) setInputVal(fmt(newVal, displayMode));
+                        }}
+                        className="w-full"
+                    />
+                )}
+            </div>
 
             <div className="border-t border-gray-100 pt-3 text-sm text-gray-400 tabular-nums">
                 = {fmt(secondaryVal, displayMode)} {secondaryUnit}
