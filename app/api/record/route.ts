@@ -6,7 +6,7 @@ export async function POST(request: Request) {
     const session = await auth()
 
     if (!session?.user || !session.user.id) {
-        return NextResponse.redirect(new URL("/auth/signin", request.url))
+        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     try {

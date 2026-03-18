@@ -20,7 +20,7 @@ export const deleteRecord = async (id: string) => {
 
 export const addRecord = async (
     data: { title: string; pace: number; distance: number; time: number }
-): Promise<PaceRecord> => {
+): Promise<PaceRecord | null> => {
     try {
         const res = await fetch("/api/record", {
             method: "POST",
@@ -31,8 +31,10 @@ export const addRecord = async (
         });
 
         if (!res.ok) {
-            throw new Error(`Failed to add record: ${res.statusText}`);
+            console.log("Failed to add record");
+            return null;
         }
+        
 
         const record: PaceRecord = await res.json(); // ensures TS knows the shape
         return record;

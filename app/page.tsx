@@ -6,10 +6,13 @@ import SliderCard from "../components/ui/SliderCard";
 import { Menu } from "lucide-react";
 import { addRecord } from "@/lib/api";
 import type { PaceRecord } from "@prisma/client";
+import { useSession, signIn } from "next-auth/react";
 
 type LockedField = "pace" | "distance" | "time";
 
 export default function Page() {
+
+    const {data: session} = useSession()
 
     // Mobile sidebar state
     const [open, setOpen] = useState(false);
@@ -31,7 +34,7 @@ export default function Page() {
     useEffect(() => {
         fetch("/api/record")
             .then(res => res.json())
-            .then(setData)
+            .then(data => setData(Array.isArray(data) ? data : []))
             .catch(console.error);
     }, []);
 
@@ -57,6 +60,11 @@ export default function Page() {
     // optimistic save
     const handleSave = async () => {
 
+        if (!session) {
+            signIn()
+            return 
+        }
+
         const oldData = data;
         const newRecord = {
             title,
@@ -73,6 +81,10 @@ export default function Page() {
 
         try {
             const created = await addRecord(newRecord)
+            if (!created) {
+                setData(oldData)
+                return
+            }
             setData(prev => prev.map(record => (record.id ===  "temp" ? created : record)))
         } catch {
             setData(oldData)
