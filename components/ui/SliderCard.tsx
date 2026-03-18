@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 
 type DisplayMode = "decimal" | "time";
 
@@ -13,62 +13,56 @@ interface UnitOption {
 interface SliderCardProps {
     title: string;
     primaryFn: (t: number) => number;
-    invertFn: (primary: number) => number;
-    convertFn?: never;
-    primaryUnit?: never;
-    secondaryUnit?: never;
+    invertFn: (base: number) => number;
     unitGroup: "pace" | "distance" | "time";
+    value: number;
+    setValue: (base: number) => void;
     isLocked?: boolean;
     onLock?: () => void;
     lockedValue?: number | undefined;
-    onValueChange?: (val: number) => void;
 }
 
+// base units: pace = m/s, distance = m, time = sec
+
 const PACE_UNITS: UnitOption[] = [
-    { label: "min/mi", fromBase: (v) => v, toBase: (v) => v, displayMode: "time", step: 1 / 60 },
-    { label: "min/km", fromBase: (v) => v / 1.60934, toBase: (v) => v * 1.60934, displayMode: "time", step: 1 / 60 },
-    { label: "mph", fromBase: (v) => 60 / v, toBase: (v) => 60 / v, displayMode: "decimal", step: 0.1 },
-    { label: "km/h", fromBase: (v) => 96.5606 / v, toBase: (v) => 96.5606 / v, displayMode: "decimal", step: 0.1 },
-    { label: "m/s", fromBase: (v) => 26.8224 / v, toBase: (v) => 26.8224 / v, displayMode: "decimal", step: 0.01 },
-    { label: "ft/s", fromBase: (v) => 88 / v, toBase: (v) => 88 / v, displayMode: "decimal", step: 0.1 },
+    // min/km: 1 m/s = 1000m/min... pace = 1/speed * 1000/60
+    { label: "min/km", fromBase: (v) => 1000 / (v * 60), toBase: (v) => 1000 / (v * 60), displayMode: "time", step: 1 / 60 },
+    { label: "min/mi", fromBase: (v) => 1609.34 / (v * 60), toBase: (v) => 1609.34 / (v * 60), displayMode: "time", step: 1 / 60 },
+    { label: "km/h", fromBase: (v) => v * 3.6, toBase: (v) => v / 3.6, displayMode: "decimal", step: 0.1 },
+    { label: "mph", fromBase: (v) => v * 2.23694, toBase: (v) => v / 2.23694, displayMode: "decimal", step: 0.1 },
+    { label: "m/s", fromBase: (v) => v, toBase: (v) => v, displayMode: "decimal", step: 0.01 },
+    { label: "ft/s", fromBase: (v) => v * 3.28084, toBase: (v) => v / 3.28084, displayMode: "decimal", step: 0.1 },
 ];
 
 const DISTANCE_UNITS: UnitOption[] = [
-    { label: "mi", fromBase: (v) => v, toBase: (v) => v, displayMode: "decimal", step: 0.1 },
-    { label: "km", fromBase: (v) => v * 1.60934, toBase: (v) => v / 1.60934, displayMode: "decimal", step: 0.1 },
-    { label: "m", fromBase: (v) => v * 1609.34, toBase: (v) => v / 1609.34, displayMode: "decimal", step: 10 },
-    { label: "ft", fromBase: (v) => v * 5280, toBase: (v) => v / 5280, displayMode: "decimal", step: 100 },
+    { label: "km", fromBase: (v) => v / 1000, toBase: (v) => v * 1000, displayMode: "decimal", step: 0.1 },
+    { label: "mi", fromBase: (v) => v / 1609.34, toBase: (v) => v * 1609.34, displayMode: "decimal", step: 0.1 },
+    { label: "m", fromBase: (v) => v, toBase: (v) => v, displayMode: "decimal", step: 10 },
+    { label: "ft", fromBase: (v) => v * 3.28084, toBase: (v) => v / 3.28084, displayMode: "decimal", step: 100 },
 ];
 
 const TIME_UNITS: UnitOption[] = [
-    { label: "min", fromBase: (v) => v, toBase: (v) => v, displayMode: "time", step: 1 },
-    { label: "hr", fromBase: (v) => v / 60, toBase: (v) => v * 60, displayMode: "decimal", step: 0.01 },
-    { label: "sec", fromBase: (v) => v * 60, toBase: (v) => v / 60, displayMode: "decimal", step: 1 },
+    // fromBase receives seconds, fmtTime expects minutes so divide by 60
+    { label: "min", fromBase: (v) => v / 60, toBase: (v) => v * 60, displayMode: "time", step: 1 },
+    { label: "hr", fromBase: (v) => v / 3600, toBase: (v) => v * 3600, displayMode: "decimal", step: 0.01 },
+    { label: "sec", fromBase: (v) => v, toBase: (v) => v, displayMode: "decimal", step: 1 },
 ];
 
-function unitOptions(group: "pace" | "distance" | "time"): UnitOption[] {
+function getUnits(group: "pace" | "distance" | "time"): UnitOption[] {
     if (group === "pace") return PACE_UNITS;
     if (group === "distance") return DISTANCE_UNITS;
     return TIME_UNITS;
 }
 
-function defaultUnits(group: "pace" | "distance" | "time"): [UnitOption, UnitOption] {
-    if (group === "pace") return [
-        PACE_UNITS.find(u => u.label === "min/km")!,
-        PACE_UNITS.find(u => u.label === "min/mi")!,
-    ];
-    if (group === "distance") return [
-        DISTANCE_UNITS.find(u => u.label === "km")!,
-        DISTANCE_UNITS.find(u => u.label === "mi")!,
-    ];
-    return [
-        TIME_UNITS.find(u => u.label === "min")!,
-        TIME_UNITS.find(u => u.label === "hr")!,
-    ];
+function getDefaults(group: "pace" | "distance" | "time"): [UnitOption, UnitOption] {
+    if (group === "pace") return [PACE_UNITS[0]!, PACE_UNITS[1]!];
+    if (group === "distance") return [DISTANCE_UNITS[0]!, DISTANCE_UNITS[1]!];
+    return [TIME_UNITS[0]!, TIME_UNITS[1]!];
 }
 
+// receives minutes, formats as m:ss or h:mm:ss
 function fmtTime(minutes: number): string {
-    const totalSeconds = Math.round(minutes * 60);
+    const totalSeconds = Math.floor(minutes * 60); // note: floor to give conservative pace estimates given goal time
     const h = Math.floor(totalSeconds / 3600);
     const m = Math.floor((totalSeconds % 3600) / 60);
     const s = totalSeconds % 60;
@@ -76,37 +70,34 @@ function fmtTime(minutes: number): string {
     return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function fmtInputPreview(val: string): string {
-    const digits = val.replace(/\D/g, "").slice(0, 6);
-    if (digits.length === 0) return "";
-    if (digits.length <= 2) return digits;
-    if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
-    if (digits.length === 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
-    if (digits.length === 5) return `${digits[0]}:${digits.slice(1, 3)}:${digits.slice(3)}`;
-    return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4)}`;
-}
-
-function parseTime(val: string): number {
-    const digits = val.replace(/\D/g, "");
-    if (digits.length === 0) return 0;
-    let h = 0, m = 0, s = 0;
-    if (digits.length <= 2) { s = parseInt(digits); }
-    else if (digits.length === 3) { m = parseInt(digits[0]!); s = parseInt(digits.slice(1)); }
-    else if (digits.length === 4) { m = parseInt(digits.slice(0, 2)); s = parseInt(digits.slice(2)); }
-    else if (digits.length === 5) { h = parseInt(digits[0]!); m = parseInt(digits.slice(1, 3)); s = parseInt(digits.slice(3)); }
-    else { h = parseInt(digits.slice(0, 2)); m = parseInt(digits.slice(2, 4)); s = parseInt(digits.slice(4, 6)); }
-    return h * 60 + m + s / 60;
-}
-
 function fmt(n: number, mode: DisplayMode): string {
     return mode === "time" ? fmtTime(n) : n.toFixed(2);
 }
 
-function UnitDropdown({
-    options,
-    selected,
-    onChange,
-}: {
+function fmtInputPreview(val: string): string {
+    const d = val.replace(/\D/g, "").slice(0, 6);
+    if (d.length === 0) return "";
+    if (d.length <= 2) return d;
+    if (d.length === 3) return `${d[0]}:${d.slice(1)}`;
+    if (d.length === 4) return `${d.slice(0, 2)}:${d.slice(2)}`;
+    if (d.length === 5) return `${d[0]}:${d.slice(1, 3)}:${d.slice(3)}`;
+    return `${d.slice(0, 2)}:${d.slice(2, 4)}:${d.slice(4)}`;
+}
+
+// returns minutes (toBase for min unit then converts to seconds)
+function parseTime(val: string): number {
+    const d = val.replace(/\D/g, "");
+    if (!d) return 0;
+    let h = 0, m = 0, s = 0;
+    if (d.length <= 2) { s = parseInt(d); }
+    else if (d.length === 3) { m = parseInt(d[0]!); s = parseInt(d.slice(1)); }
+    else if (d.length === 4) { m = parseInt(d.slice(0, 2)); s = parseInt(d.slice(2)); }
+    else if (d.length === 5) { h = parseInt(d[0]!); m = parseInt(d.slice(1, 3)); s = parseInt(d.slice(3)); }
+    else { h = parseInt(d.slice(0, 2)); m = parseInt(d.slice(2, 4)); s = parseInt(d.slice(4, 6)); }
+    return h * 60 + m + s / 60;
+}
+
+function UnitDropdown({ options, selected, onChange }: {
     options: UnitOption[];
     selected: UnitOption;
     onChange: (u: UnitOption) => void;
@@ -115,11 +106,11 @@ function UnitDropdown({
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        function handleClick(e: MouseEvent) {
+        function onClick(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
         }
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
+        document.addEventListener("mousedown", onClick);
+        return () => document.removeEventListener("mousedown", onClick);
     }, []);
 
     return (
@@ -139,9 +130,7 @@ function UnitDropdown({
                         <button
                             key={u.label}
                             onClick={() => { onChange(u); setOpen(false); }}
-                            className={`block w-full text-left px-3 py-1.5 text-sm transition-colors ${u.label === selected.label
-                                    ? "text-blue-500 bg-blue-50"
-                                    : "text-gray-600 hover:bg-gray-50"
+                            className={`block w-full text-left px-3 py-1.5 text-sm transition-colors ${u.label === selected.label ? "text-blue-500 bg-blue-50" : "text-gray-600 hover:bg-gray-50"
                                 }`}
                         >
                             {u.label}
@@ -158,112 +147,108 @@ export default function SliderCard({
     primaryFn,
     invertFn,
     unitGroup,
+    value,
+    setValue,
     isLocked = false,
     onLock,
     lockedValue,
-    onValueChange,
 }: SliderCardProps) {
-    const options = unitOptions(unitGroup);
-
-    const [primaryUnit, setPrimaryUnit] = useState<UnitOption>(() => defaultUnits(unitGroup)[0]!);
-    const [secondaryUnit, setSecondaryUnit] = useState<UnitOption>(() => defaultUnits(unitGroup)[1]!);
-
-    const [t, setT] = useState(0.5);
+    const units = getUnits(unitGroup);
+    const [primaryUnit, setPrimaryUnit] = useState<UnitOption>(() => getDefaults(unitGroup)[0]!);
+    const [secondaryUnit, setSecondaryUnit] = useState<UnitOption>(() => getDefaults(unitGroup)[1]!);
     const [inputVal, setInputVal] = useState("");
     const [focused, setFocused] = useState(false);
-
-    const tRef = useRef(t);
-    useEffect(() => { tRef.current = t; }, [t]);
 
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // base value is always in the group's base unit (min/mi, mi, min)
-    const baseVal = isLocked && lockedValue !== undefined ? lockedValue : primaryFn(t);
+    // base value always comes from parent — single source of truth
+    const baseVal = isLocked && lockedValue !== undefined ? lockedValue : value;
     const primaryVal = primaryUnit.fromBase(baseVal);
     const secondaryVal = secondaryUnit.fromBase(baseVal);
-
     const displayMode = primaryUnit.displayMode;
-    const step = primaryUnit.step;
 
-    const setFromDisplay = useCallback((displayVal: number) => {
-        const base = primaryUnit.toBase(displayVal);
-        const newT = Math.min(1, Math.max(0, invertFn(base)));
-        setT(newT);
-        onValueChange?.(base);
-    }, [primaryUnit, invertFn, onValueChange]);
+    // t is only used for slider visual position
+    const t = Math.min(1, Math.max(0, invertFn(baseVal)));
 
-    const nudge = useCallback((delta: number) => {
-        const newDisplay = primaryUnit.fromBase(primaryFn(tRef.current)) + delta;
-        setFromDisplay(newDisplay);
-        setInputVal(fmt(newDisplay, displayMode));
-    }, [primaryUnit, primaryFn, setFromDisplay, displayMode]);
+    function commitDisplay(display: number) {
+        setValue(primaryUnit.toBase(display));
+    }
 
-    const startHold = (delta: number) => {
+    function nudge(delta: number) {
+        const next = primaryUnit.fromBase(baseVal) + delta;
+        commitDisplay(next);
+        setInputVal(fmt(next, displayMode));
+    }
+
+    function startHold(delta: number) {
         nudge(delta);
         timeoutRef.current = setTimeout(() => {
             intervalRef.current = setInterval(() => nudge(delta), 60);
         }, 400);
-    };
+    }
 
-    const stopHold = () => {
+    function stopHold() {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    }
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    function handleSlider(e: React.ChangeEvent<HTMLInputElement>) {
+        const newBase = primaryFn(Number(e.target.value));
+        setValue(newBase);
+        if (focused) setInputVal(fmt(primaryUnit.fromBase(newBase), displayMode));
+    }
+
+    function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
         const raw = e.target.value;
         if (displayMode === "time") {
-            const preview = fmtInputPreview(raw);
-            setInputVal(preview);
+            setInputVal(fmtInputPreview(raw));
             const parsed = parseTime(raw);
-            if (!isNaN(parsed) && parsed > 0) setFromDisplay(parsed);
+            if (parsed > 0) commitDisplay(parsed);
         } else {
             setInputVal(raw);
             const parsed = parseFloat(raw);
-            if (!isNaN(parsed)) setFromDisplay(parsed);
+            if (!isNaN(parsed)) commitDisplay(parsed);
         }
-    };
+    }
 
-    const handleFocus = () => {
+    function handleFocus() {
         setFocused(true);
         setInputVal(fmt(primaryVal, displayMode));
-    };
+    }
 
-    const handleBlur = () => {
+    function handleBlur() {
         setFocused(false);
         setInputVal("");
-    };
+    }
 
-    const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+    function handleWheel(e: React.WheelEvent<HTMLInputElement>) {
         e.preventDefault();
         e.stopPropagation();
         e.currentTarget.blur();
-        nudge(e.deltaY < 0 ? step : -step);
-    };
+        nudge(e.deltaY < 0 ? primaryUnit.step : -primaryUnit.step);
+    }
 
-    const handlePrimaryUnitChange = (u: UnitOption) => {
+    function handlePrimaryUnitChange(u: UnitOption) {
         setPrimaryUnit(u);
         if (u.label === secondaryUnit.label) {
-            const fallback = options.find(o => o.label !== u.label);
+            const fallback = units.find(o => o.label !== u.label);
             if (fallback) setSecondaryUnit(fallback);
         }
-    };
+    }
 
-    const handleSecondaryUnitChange = (u: UnitOption) => {
+    function handleSecondaryUnitChange(u: UnitOption) {
         setSecondaryUnit(u);
         if (u.label === primaryUnit.label) {
-            const fallback = options.find(o => o.label !== u.label);
+            const fallback = units.find(o => o.label !== u.label);
             if (fallback) setPrimaryUnit(fallback);
         }
-    };
+    }
 
     return (
         <div className={`w-67 bg-white p-6 rounded-3xl shadow-md ${isLocked ? "ring-2 ring-blue-400" : ""}`}>
             <div className="flex items-center justify-between mb-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                    {title}
-                </p>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{title}</p>
                 <button
                     onClick={onLock}
                     className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${isLocked
@@ -283,31 +268,27 @@ export default function SliderCard({
                     {!isLocked && (
                         <div className="flex flex-col items-center self-stretch border-r border-gray-200 shrink-0">
                             <button
-                                onMouseDown={(e) => { e.preventDefault(); startHold(step); }}
+                                onMouseDown={(e) => { e.preventDefault(); startHold(primaryUnit.step); }}
                                 onMouseUp={stopHold}
                                 onMouseLeave={stopHold}
-                                onTouchStart={(e) => { e.preventDefault(); startHold(step); }}
+                                onTouchStart={(e) => { e.preventDefault(); startHold(primaryUnit.step); }}
                                 onTouchEnd={stopHold}
                                 className="flex-1 w-6 hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 flex items-center justify-center select-none cursor-pointer text-xs transition-colors border-b border-gray-200"
-                            >
-                                +
-                            </button>
+                            >+</button>
                             <button
-                                onMouseDown={(e) => { e.preventDefault(); startHold(-step); }}
+                                onMouseDown={(e) => { e.preventDefault(); startHold(-primaryUnit.step); }}
                                 onMouseUp={stopHold}
                                 onMouseLeave={stopHold}
-                                onTouchStart={(e) => { e.preventDefault(); startHold(-step); }}
+                                onTouchStart={(e) => { e.preventDefault(); startHold(-primaryUnit.step); }}
                                 onTouchEnd={stopHold}
                                 className="flex-1 w-6 hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 flex items-center justify-center select-none cursor-pointer text-xs transition-colors"
-                            >
-                                −
-                            </button>
+                            >−</button>
                         </div>
                     )}
                     <input
                         type="text"
                         inputMode={displayMode === "time" ? "text" : "decimal"}
-                        value={isLocked ? fmt(primaryVal, displayMode) : (focused ? inputVal : fmt(primaryVal, displayMode))}
+                        value={focused ? inputVal : fmt(primaryVal, displayMode)}
                         onChange={handleInputChange}
                         onFocus={handleFocus}
                         onBlur={handleBlur}
@@ -317,29 +298,15 @@ export default function SliderCard({
                             }`}
                     />
                 </div>
-                <UnitDropdown
-                    options={options}
-                    selected={primaryUnit}
-                    onChange={handlePrimaryUnitChange}
-                />
+                <UnitDropdown options={units} selected={primaryUnit} onChange={handlePrimaryUnitChange} />
             </div>
 
             <div className="mb-4" style={{ height: "20px" }}>
                 {!isLocked && (
                     <input
-                        type="range"
-                        min={0}
-                        max={1}
-                        step={0.001}
-                        value={t}
+                        type="range" min={0} max={1} step={0.001} value={t}
                         draggable={false}
-                        onChange={(e) => {
-                            const newT = Number(e.target.value);
-                            setT(newT);
-                            const newBase = primaryFn(newT);
-                            onValueChange?.(newBase);
-                            if (focused) setInputVal(fmt(primaryUnit.fromBase(newBase), displayMode));
-                        }}
+                        onChange={handleSlider}
                         className="w-full"
                     />
                 )}
@@ -347,11 +314,7 @@ export default function SliderCard({
 
             <div className="border-t border-gray-100 pt-3 text-sm text-gray-400 tabular-nums flex items-center justify-between">
                 <span>= {fmt(secondaryVal, secondaryUnit.displayMode)}</span>
-                <UnitDropdown
-                    options={options}
-                    selected={secondaryUnit}
-                    onChange={handleSecondaryUnitChange}
-                />
+                <UnitDropdown options={units} selected={secondaryUnit} onChange={handleSecondaryUnitChange} />
             </div>
         </div>
     );

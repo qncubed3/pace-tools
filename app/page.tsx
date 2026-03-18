@@ -12,22 +12,59 @@ export default function Page() {
     // Mobile sidebar state
     const [open, setOpen] = useState(false);
 
-    // Selected field
+    // Which field is being calculated
     const [lockedField, setLockedField] = useState<LockedField>("time");
 
-    // Field source of truth
-    const [pace, setPace] = useState(6);
-    const [distance, setDistance] = useState(15);
-    const [time, setTime] = useState(90);
+    // Source of truth — SI units: pace = m/s, distance = m, time = sec
+    const [pace, setPace] = useState(1000 / (6 * 60));  // 6 min/km in m/s ≈ 2.778
+    const [distance, setDistance] = useState(10000);     // 10 km in m
+    const [time, setTime] = useState(3600);              // 60 min in sec
+
+    // Title to save pace record
+    const [title, setTitle] = useState("");
 
     useEffect(() => {
         document.body.style.overflow = open ? "hidden" : "auto";
     }, [open]);
 
-    // Derived fields
-    const lockedPace = time / distance;
-    const lockedDistance = time / pace;
-    const lockedTime = pace * distance;
+    // Derived values — pace is now m/s so: distance = pace * time, etc.
+    const derivedPace = distance / time;
+    const derivedDistance = pace * time;
+    const derivedTime = distance / pace;
+
+    // Adopt the current derived value of the outgoing locked field
+    // so numbers don't jump when switching
+    function switchLocked(field: LockedField) {
+        if (field === lockedField) return;
+        if (lockedField === "pace") setPace(derivedPace);
+        if (lockedField === "distance") setDistance(derivedDistance);
+        if (lockedField === "time") setTime(derivedTime);
+        setLockedField(field);
+    }
+
+    // Save function
+    const handleSave = async () => {
+        const data = {
+            title,
+            pace: lockedField === "pace" ? derivedPace : pace,
+            distance: lockedField === "distance" ? derivedDistance : distance,
+            time: lockedField === "time" ? derivedTime : time,
+        };
+        console.log(data);
+
+        try {
+            await fetch("/api/record", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+        } catch(err) {
+            console.log(err)
+        }
+        // setTitle("");   
+    }
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -66,37 +103,58 @@ export default function Page() {
             </div>
 
             {/* Main panel */}
-            <div className="flex-1 flex flex-col xl:flex-row items-center justify-center gap-4 lg:gap-4 xl:gap-18 w-full">
-                <SliderCard
-                    title="pace"
-                    primaryFn={(t) => 3 + t * 10}
-                    invertFn={(v) => (v - 3) / 10}
-                    unitGroup="pace"
-                    isLocked={lockedField === "pace"}
-                    onLock={() => setLockedField("pace")}
-                    lockedValue={lockedField === "pace" ? lockedPace : undefined}
-                    onValueChange={setPace}
-                />
-                <SliderCard
-                    title="distance"
-                    primaryFn={(t) => t * 30}
-                    invertFn={(miles) => miles / 30}
-                    unitGroup="distance"
-                    isLocked={lockedField === "distance"}
-                    onLock={() => setLockedField("distance")}
-                    lockedValue={lockedField === "distance" ? lockedDistance : undefined}
-                    onValueChange={setDistance}
-                />
-                <SliderCard
-                    title="time"
-                    primaryFn={(t) => t * 300}
-                    invertFn={(v) => v / 300}
-                    unitGroup="time"
-                    isLocked={lockedField === "time"}
-                    onLock={() => setLockedField("time")}
-                    lockedValue={lockedField === "time" ? lockedTime : undefined}
-                    onValueChange={setTime}
-                />
+            <div className="flex-1 flex flex-col items-center justify-center w-full">
+                <div className="flex flex-col xl:flex-row gap-4 lg:gap-4 xl:gap-18 m-10">
+                    <SliderCard
+                        title="pace"
+                        primaryFn={(t) => 0.5 + t * 9.5}   // 0.5–10 m/s
+                        invertFn={(v) => (v - 0.5) / 9.5}
+                        unitGroup="pace"
+                        value={pace}
+                        setValue={setPace}
+                        isLocked={lockedField === "pace"}
+                        onLock={() => switchLocked("pace")}
+                        lockedValue={lockedField === "pace" ? derivedPace : undefined}
+                    />
+                    <SliderCard
+                        title="distance"
+                        primaryFn={(t) => t * 100000}       // 0–100 km in m
+                        invertFn={(v) => v / 100000}
+                        unitGroup="distance"
+                        value={distance}
+                        setValue={setDistance}
+                        isLocked={lockedField === "distance"}
+                        onLock={() => switchLocked("distance")}
+                        lockedValue={lockedField === "distance" ? derivedDistance : undefined}
+                    />
+                    <SliderCard
+                        title="time"
+                        primaryFn={(t) => t * 18000}        // 0–5 hr in sec
+                        invertFn={(v) => v / 18000}
+                        unitGroup="time"
+                        value={time}
+                        setValue={setTime}
+                        isLocked={lockedField === "time"}
+                        onLock={() => switchLocked("time")}
+                        lockedValue={lockedField === "time" ? derivedTime : undefined}
+                    />
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                    <input
+                        type="text"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                        placeholder="Name this pace..."
+                        className="text-sm px-4 py-2 rounded-full border border-gray-200 bg-white outline-none focus:border-blue-400 transition-colors w-64 text-center"
+                    />
+                    <button
+                        onClick={handleSave}
+                        className="text-sm w-64 px-4 py-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium"
+                    >
+                        Save pace record
+                    </button>
+                </div>
             </div>
         </div>
     );

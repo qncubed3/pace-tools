@@ -66,9 +66,9 @@ model VerificationToken {
 model PaceRecord {
   id String @id @default(cuid())
   title String  
-  distance Int?
-  time Int?
-  pace Int?
+  distance Float?
+  time Float?
+  pace Float?
 
   user User @relation("UserPaceRecords", fields: [userId], references: [id])
   userId String
