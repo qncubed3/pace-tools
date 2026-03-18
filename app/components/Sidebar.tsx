@@ -2,9 +2,19 @@
 
 import { signIn, useSession } from "next-auth/react";
 import SidebarHeader from "./SidebarHeader";
+import { useEffect, useState } from "react";
 
 export default function Sidebar() {
     const { data: session } = useSession();
+
+    const [data, setData] = useState<any>(null);
+
+    useEffect(() => {
+        fetch("/api/record")
+            .then(res => res.json())
+            .then(setData)
+            .catch(console.error);
+    }, []);
 
     return (
         <div className="h-full w-full bg-white border-r border-gray-100 flex flex-col">
@@ -13,7 +23,7 @@ export default function Sidebar() {
             <div className="flex-1 overflow-y-auto">
                 {session ? (
                     <div className="p-4">
-                        {/* saved paces list goes here */}
+                        <pre>{JSON.stringify(data, null, 2)}</pre>
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full px-6 text-center gap-4">
