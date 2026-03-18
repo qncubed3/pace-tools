@@ -1,22 +1,23 @@
-"use client"
-
 import { signIn, useSession } from "next-auth/react";
 import SidebarHeader from "./SidebarHeader";
-import { useEffect, useState } from "react";
 import PaceRecordCard from "@/components/ui/PaceRecordCard";
 import { type PaceRecord } from "@prisma/client";
+import { deleteRecord } from "@/lib/api";
+import { type Dispatch, type SetStateAction } from "react";
 
-export default function Sidebar() {
+export default function Sidebar({
+    data,
+    setData
+}: {
+    data: PaceRecord[];
+    setData: Dispatch<SetStateAction<PaceRecord[]>>;
+}) {
     const { data: session } = useSession();
 
-    const [data, setData] = useState<PaceRecord[]>([]);
-
-    useEffect(() => {
-        fetch("/api/record")
-            .then(res => res.json())
-            .then(setData)
-            .catch(console.error);
-    }, []);
+    const handleDelete = async (id: string) => {
+        setData((prev: PaceRecord[]) => prev.filter(r => r.id !== id));
+        await deleteRecord(id)
+    }
 
     return (
         <div className="h-full w-full bg-white border-r border-gray-100 flex flex-col">
@@ -29,10 +30,12 @@ export default function Sidebar() {
                         {data?.map((paceRecord, index: number) => (
                             <PaceRecordCard
                                 key={index}
+                                id={paceRecord.id}
                                 title={paceRecord.title}
                                 distance={paceRecord.distance}
                                 pace={paceRecord.pace}
                                 time={paceRecord.time}
+                                onDelete={handleDelete}
                             />
                         )
                         )}

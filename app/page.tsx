@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import SliderCard from "../components/ui/SliderCard";
 import { Menu } from "lucide-react";
+import { addRecord } from "@/lib/api";
+import type { PaceRecord } from "@prisma/client";
 
 type LockedField = "pace" | "distance" | "time";
 
@@ -22,6 +24,16 @@ export default function Page() {
 
     // Title to save pace record
     const [title, setTitle] = useState("");
+
+    // Current data displayed on sidebar
+    const [data, setData] = useState<PaceRecord[]>([]);
+    
+    useEffect(() => {
+        fetch("/api/record")
+            .then(res => res.json())
+            .then(setData)
+            .catch(console.error);
+    }, []);
 
     useEffect(() => {
         document.body.style.overflow = open ? "hidden" : "auto";
@@ -42,28 +54,29 @@ export default function Page() {
         setLockedField(field);
     }
 
-    // Save function
+    // optimistic save
     const handleSave = async () => {
-        const data = {
+
+        const oldData = data;
+        const newRecord = {
             title,
             pace: lockedField === "pace" ? derivedPace : pace,
             distance: lockedField === "distance" ? derivedDistance : distance,
             time: lockedField === "time" ? derivedTime : time,
         };
-        console.log(data);
+
+        setData(prev => [...prev, {
+            ...newRecord, 
+            userId: "temp", 
+            id: "temp" 
+        }])
 
         try {
-            await fetch("/api/record", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(data)
-            })
-        } catch(err) {
-            console.log(err)
+            const created = await addRecord(newRecord)
+            setData(prev => prev.map(record => (record.id ===  "temp" ? created : record)))
+        } catch {
+            setData(oldData)
         }
-        // setTitle("");   
     }
 
     return (
@@ -85,7 +98,7 @@ export default function Page() {
                 ${open ? "translate-x-0" : "-translate-x-full"}
                 lg:hidden
             `}>
-                <Sidebar />
+                <Sidebar data={data} setData={setData} />
             </div>
 
             {/* Mobile sidebar close area */}
@@ -99,7 +112,7 @@ export default function Page() {
 
             {/* Desktop sidebar */}
             <div className="hidden lg:block w-100">
-                <Sidebar />
+                <Sidebar data={data} setData={setData} />
             </div>
 
             {/* Main panel */}
@@ -144,7 +157,7 @@ export default function Page() {
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                        // onKeyDown={(e) => e.key === "Enter" && handleSave}
                         placeholder="Name this pace..."
                         className="text-sm px-4 py-2 rounded-full border border-gray-200 bg-white outline-none focus:border-blue-400 transition-colors w-64 text-center"
                     />
