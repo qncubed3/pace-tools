@@ -14,7 +14,7 @@ export async function POST(request: Request) {
         const record = await prisma.paceRecord.create({
             data: {
                 ...data,
-                userId: "cmmt2g87s0000dsufmigihnmb" //session.user.id
+                userId: session.user.id
             }
         })
         console.log(record)
