@@ -3,6 +3,7 @@
 import { signIn, useSession } from "next-auth/react";
 import SidebarHeader from "./SidebarHeader";
 import { useEffect, useState } from "react";
+import PaceRecordCard from "@/components/ui/PaceRecordCard";
 
 export default function Sidebar() {
     const { data: session } = useSession();
@@ -21,9 +22,19 @@ export default function Sidebar() {
             <SidebarHeader />
 
             <div className="flex-1 overflow-y-auto">
+                
                 {session ? (
-                    <div className="p-4">
-                        <pre>{JSON.stringify(data, null, 2)}</pre>
+                    <div>
+                        {data?.map((paceRecord, index: number) => (
+                            <PaceRecordCard
+                                key={index}
+                                title={paceRecord.title}
+                                distance={paceRecord.distance}
+                                pace={paceRecord.pace}
+                                time={paceRecord.time}
+                            />
+                        )
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full px-6 text-center gap-4">
