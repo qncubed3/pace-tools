@@ -4,11 +4,12 @@ import { signIn, useSession } from "next-auth/react";
 import SidebarHeader from "./SidebarHeader";
 import { useEffect, useState } from "react";
 import PaceRecordCard from "@/components/ui/PaceRecordCard";
+import { type PaceRecord } from "@prisma/client";
 
 export default function Sidebar() {
     const { data: session } = useSession();
 
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<PaceRecord[]>([]);
 
     useEffect(() => {
         fetch("/api/record")
