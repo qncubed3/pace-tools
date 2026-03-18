@@ -1,11 +1,12 @@
 interface PaceRecordCardProps {
     title: string;
-    distance: number;
-    pace: number;
-    time: number;
+    distance: number | null;
+    pace: number | null;
+    time: number | null;
 }
 
-function fmtTime(seconds: number): string {
+function fmtTime(seconds: number | null): string {
+    if (!seconds) return "N/A"
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     const s = Math.round(seconds % 60);
@@ -13,15 +14,17 @@ function fmtTime(seconds: number): string {
     return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function fmtPace(mps: number): string {
+function fmtPace(mps: number | null): string {
     // m/s to min/km
+    if (!mps) return "N/A"
     const minPerKm = 1000 / (mps * 60);
     const m = Math.floor(minPerKm);
     const s = Math.round((minPerKm - m) * 60);
     return `${m}:${String(s).padStart(2, "0")} /km`;
 }
 
-function fmtDistance(meters: number): string {
+function fmtDistance(meters: number | null): string {
+    if (!meters) return "N/A"
     if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`;
     return `${Math.round(meters)} m`;
 }
